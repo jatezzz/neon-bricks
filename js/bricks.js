@@ -27,6 +27,19 @@
     };
 
     var I = window.NeonI18n, D = window.NeonDaily;
+
+    //  The stage from the game's cover art (img/bg.jpg): sky, sun, mountains and the grid floor the paddle rides on.
+    //  Dimmed so the bricks stay the brightest thing on screen. Until it loads (or if it fails) the plain gradient shows.
+    var BACKDROP = new Image(), backdropReady = false;
+    BACKDROP.onload = function () { backdropReady = true; };
+    BACKDROP.src = 'img/bg.jpg?v=1';
+    function drawBackdrop(ctx, x, y, w, h, dim) {
+        if (!backdropReady) { return false; }
+        var s = Math.max(w / BACKDROP.width, h / BACKDROP.height), dw = BACKDROP.width * s, dh = BACKDROP.height * s;
+        ctx.drawImage(BACKDROP, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
+        ctx.fillStyle = 'rgba(5,6,15,' + dim + ')'; ctx.fillRect(x, y, w, h);
+        return true;
+    }
     function t(key, vars) { return I ? I.t(key, vars) : key; }
     function num(n) { return I ? I.number(n) : String(n); }
     function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
@@ -526,7 +539,8 @@
     Game.prototype.burst = function (x, y, color, count) {
         for (var i = 0; i < count && this.particles.length < 320; i++) {
             var a = Math.random() * Math.PI * 2, v = 60 + Math.random() * 160;
-            this.particles.push({ x: x, y: y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 40, life: 0.5 + Math.random() * 0.3, color: color });
+            this.particles.push({ x: x, y: y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 40, life: 0.5 + Math.random() * 0.3, color: color,
+                                  rot: Math.random() * 6.28, vr: (Math.random() - 0.5) * 18, size: 3 + Math.random() * 3 });
         }
     };
 
@@ -588,10 +602,14 @@
                     c.beginPath(); c.moveTo(b.x + 8, b.y + 3); c.lineTo(b.x + 15, b.y + 9); c.lineTo(b.x + 12, b.y + 13);
                     c.moveTo(b.x + 15, b.y + 9); c.lineTo(b.x + 25, b.y + 6); c.stroke();
                 }
-            } else {
-                c.fillStyle = 'rgba(255,255,255,0.35)';
-                c.fillRect(b.x + 3, b.y + 2, b.w - 6, 3);
             }
+            //  Glass, like the cover: light from above, a darker lower edge, a bright top rim.
+            var gl = c.createLinearGradient(0, b.y, 0, b.y + b.h);
+            gl.addColorStop(0, 'rgba(255,255,255,0.42)'); gl.addColorStop(0.45, 'rgba(255,255,255,0.06)');
+            gl.addColorStop(0.55, 'rgba(0,0,0,0)'); gl.addColorStop(1, 'rgba(0,0,0,0.28)');
+            c.fillStyle = gl; roundRect(c, b.x, b.y, b.w, b.h, 3); c.fill();
+            c.fillStyle = 'rgba(255,255,255,0.75)'; c.fillRect(b.x + 4, b.y + 1.5, b.w - 8, 1.5);
+            c.fillStyle = 'rgba(0,0,0,0.35)'; c.fillRect(b.x + 2, b.y + b.h - 3, b.w - 4, 3);     // the brick's lower side: thickness
             if (b.power) {
                 c.fillStyle = '#05060f'; c.font = 'bold 11px Arial, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
                 c.fillText('✦', b.x + b.w / 2, b.y + b.h / 2 + 1);
@@ -607,13 +625,15 @@
         ctx.setTransform(1, 0, 0, 1, 0, 0);
         ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         ctx.setTransform(this.ratio, 0, 0, this.ratio, 0, 0);
-        //  Background: deep blue with a faint synthwave grid.
-        var g = ctx.createLinearGradient(0, 0, 0, H);
-        g.addColorStop(0, '#05060f'); g.addColorStop(1, '#140a2a');
-        ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-        ctx.strokeStyle = 'rgba(177,77,255,0.10)'; ctx.lineWidth = 1;
-        for (var gx = 0; gx <= W; gx += 40) { ctx.beginPath(); ctx.moveTo(gx, TOP); ctx.lineTo(gx, H); ctx.stroke(); }
-        for (var gy = TOP; gy <= H; gy += 40) { ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(W, gy); ctx.stroke(); }
+        //  Background: the cover's stage; a deep blue gradient with a faint grid until it loads.
+        if (!drawBackdrop(ctx, 0, 0, W, H, 0.38)) {
+            var g = ctx.createLinearGradient(0, 0, 0, H);
+            g.addColorStop(0, '#05060f'); g.addColorStop(1, '#140a2a');
+            ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+            ctx.strokeStyle = 'rgba(177,77,255,0.10)'; ctx.lineWidth = 1;
+            for (var gx = 0; gx <= W; gx += 40) { ctx.beginPath(); ctx.moveTo(gx, TOP); ctx.lineTo(gx, H); ctx.stroke(); }
+            for (var gy = TOP; gy <= H; gy += 40) { ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(W, gy); ctx.stroke(); }
+        }
 
         ctx.save();
         if (this.fx.shake > 0 && !this.paused) {
@@ -646,30 +666,42 @@
             ctx.shadowBlur = 0; ctx.fillStyle = '#05060f'; ctx.font = 'bold 11px Arial, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
             ctx.fillText(pw.letter, c.x, c.y + 1); ctx.restore();
         });
-        //  Paddle.
+        //  Paddle: a neon capsule with a chrome rim, and its glow reflected on the grid floor.
+        var pc = p.wideFor > 0 ? '#00f0ff' : '#ff00c8', px = p.x - p.w / 2;
         ctx.save();
-        ctx.shadowColor = p.wideFor > 0 ? '#00f0ff' : '#ff00c8'; ctx.shadowBlur = 16;
-        ctx.fillStyle = p.wideFor > 0 ? '#00f0ff' : '#ff00c8';
-        roundRect(ctx, p.x - p.w / 2, PADDLE_Y, p.w, PADDLE_H, 6); ctx.fill();
-        ctx.shadowBlur = 0; ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.fillRect(p.x - p.w / 2 + 6, PADDLE_Y + 2, p.w - 12, 2);
+        ctx.globalAlpha = 0.28; ctx.fillStyle = pc; ctx.shadowColor = pc; ctx.shadowBlur = 18;
+        roundRect(ctx, px + 4, PADDLE_Y + PADDLE_H + 6, p.w - 8, 5, 3); ctx.fill();
+        ctx.globalAlpha = 1; ctx.shadowBlur = 18;
+        var pg = ctx.createLinearGradient(0, PADDLE_Y, 0, PADDLE_Y + PADDLE_H);
+        pg.addColorStop(0, '#ffffff'); pg.addColorStop(0.35, pc); pg.addColorStop(1, p.wideFor > 0 ? '#006b80' : '#7a005f');
+        ctx.fillStyle = pg; roundRect(ctx, px, PADDLE_Y, p.w, PADDLE_H, 6); ctx.fill();
+        ctx.shadowBlur = 0; ctx.strokeStyle = 'rgba(230,240,255,0.85)'; ctx.lineWidth = 1.2;
+        roundRect(ctx, px + 0.6, PADDLE_Y + 0.6, p.w - 1.2, PADDLE_H - 1.2, 5.5); ctx.stroke();
         ctx.restore();
         //  Balls with a short trail.
         for (i = 0; i < this.balls.length; i++) {
             var b = this.balls[i];
+            //  A trail from magenta to cyan, like the cover's streak.
             for (var k = 0; k < b.trail.length; k++) {
-                ctx.globalAlpha = (k + 1) / b.trail.length * 0.35;
-                ctx.fillStyle = this.slowFor > 0 ? '#00ff9c' : '#00f0ff';
-                ctx.beginPath(); ctx.arc(b.trail[k].x, b.trail[k].y, BALL_R * (0.5 + k / b.trail.length * 0.5), 0, Math.PI * 2); ctx.fill();
+                ctx.globalAlpha = (k + 1) / b.trail.length * 0.5;
+                ctx.fillStyle = this.slowFor > 0 ? '#00ff9c' : (k < b.trail.length / 2 ? '#ff00c8' : '#00f0ff');
+                ctx.beginPath(); ctx.arc(b.trail[k].x, b.trail[k].y, BALL_R * (0.4 + k / b.trail.length * 0.6), 0, Math.PI * 2); ctx.fill();
             }
             ctx.globalAlpha = 1;
-            ctx.save(); ctx.shadowColor = '#00f0ff'; ctx.shadowBlur = 14; ctx.fillStyle = '#ffffff';
-            ctx.beginPath(); ctx.arc(b.x, b.y, BALL_R, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+            //  A chrome sphere: white core, cool rim, glow.
+            ctx.save(); ctx.shadowColor = '#00f0ff'; ctx.shadowBlur = 16;
+            var bg2 = ctx.createRadialGradient(b.x - 2, b.y - 2, 1, b.x, b.y, BALL_R + 1);
+            bg2.addColorStop(0, '#ffffff'); bg2.addColorStop(0.55, '#dff7ff'); bg2.addColorStop(1, '#4fd8ff');
+            ctx.fillStyle = bg2; ctx.beginPath(); ctx.arc(b.x, b.y, BALL_R + 1, 0, Math.PI * 2); ctx.fill(); ctx.restore();
         }
         //  Particles and floating texts.
         for (i = 0; i < this.particles.length; i++) {
             var q = this.particles[i];
             ctx.globalAlpha = Math.max(0, Math.min(1, q.life * 2)); ctx.fillStyle = q.color;
-            ctx.fillRect(q.x - 2, q.y - 2, 4, 4);
+            var r = q.rot + q.vr * (0.8 - q.life), sz = q.size || 3;          // a small spinning shard of glass
+            ctx.beginPath(); ctx.moveTo(q.x + Math.cos(r) * sz, q.y + Math.sin(r) * sz);
+            ctx.lineTo(q.x + Math.cos(r + 2.4) * sz * 0.6, q.y + Math.sin(r + 2.4) * sz * 0.6);
+            ctx.lineTo(q.x + Math.cos(r + 3.9) * sz * 0.8, q.y + Math.sin(r + 3.9) * sz * 0.8); ctx.closePath(); ctx.fill();
         }
         ctx.globalAlpha = 1;
         for (i = 0; i < this.texts.length; i++) {
