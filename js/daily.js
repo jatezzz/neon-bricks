@@ -14,11 +14,12 @@
     'use strict';
 
     var CONFIG = {
+        game: 'neon-bricks',             // sent with every counter, so the portal can tell the games apart
         portal: 'https://games.johnandrestrujillo.com',
         portalHost: 'games.johnandrestrujillo.com',
         playPath: '/play/neon-bricks',
         eventsPath: '/e',
-        firstDay: '2026-11-23',          // challenge #1 (launch day)
+        firstDay: '2026-11-22',          // challenge #1 (launch day)
         buttonsDelayMs: 700,             // game-over buttons ignore taps at first (players are still tapping)
         //  Games recommended on the game-over screen; one per day, in turn.
         recommend: [
@@ -212,7 +213,7 @@
     var sent = [];      // kept for tests and debugging
 
     function track(name, props) {
-        var q = 'ev=' + encodeURIComponent(name) + '&d=' + today() + '&h=' + encodeURIComponent(window.location.hostname) +
+        var q = 'ev=' + encodeURIComponent(name) + '&g=' + CONFIG.game + '&d=' + today() + '&h=' + encodeURIComponent(window.location.hostname) +
             '&m=' + (embedded ? 'embed' : 'page') + '&l=' + I.lang;
         Object.keys(props || {}).forEach(function (k) { if (props[k] !== '') { q += '&' + k + '=' + encodeURIComponent(props[k]); } });
         sent.push(q);

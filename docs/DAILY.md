@@ -34,7 +34,7 @@ score line. A score in a link is *declared*; it is *verified* only when it match
 ## Progress and measurement
 
 Kept in the browser only: `nb.day`, `nb.streak`, `nb.shared`, `nb.days`, `nb.lang`, `nb.mute`. Anonymous counters go
-to the portal (`/e`) as in Neon Raiders: `arrive`, `run`, `over` (`s` score, `w` wall, `k` bricks, `c` best combo,
+to the portal (`/e`) as in Neon Raiders, each with `g=neon-bricks`: `arrive`, `run`, `over` (`s` score, `w` wall, `k` bricks, `c` best combo,
 `p` power-ups caught, `n` attempt, `vs`, `o` outcome), `share_tap`, `share`, `rec`, `more`. Nothing is sent with
 "Do Not Track", on `localhost` or on plain `http`.
 

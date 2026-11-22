@@ -171,6 +171,7 @@
         this.capsules = [];
         this.slowFor = 0;
         this.paddleHits = 0;
+        this.dryHits = 0;
         this.goalPassed = false;
         this.clearFor = 0;
         this.reported = -1;
@@ -412,6 +413,9 @@
                     var u = clamp((b.x - p.x) / (p.w / 2 + BALL_R), -1, 1);
                     var a = u * 1.05;                      // up to 60 degrees from vertical
                     this.paddleHits += 1;
+                    //  A ball that keeps coming back without breaking anything is stuck in a loop: nudge its angle.
+                    this.dryHits += 1;
+                    if (this.dryHits >= 4) { a = clamp(a + (this.dryHits % 2 ? 0.22 : -0.22), -1.05, 1.05); }
                     var sp = this.baseSpeed();
                     b.vx = Math.sin(a) * sp; b.vy = -Math.cos(a) * sp;
                     b.y = PADDLE_Y - BALL_R;
@@ -458,6 +462,7 @@
             return;
         }
         this.combo += 1;
+        this.dryHits = 0;
         var mult = Math.min(1 + Math.floor((this.combo - 1) / 3), 5);
         if (mult > this.stats.maxCombo) { this.stats.maxCombo = mult; }
         var base = br.hard ? 25 : 10;

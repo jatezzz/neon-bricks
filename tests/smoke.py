@@ -4,6 +4,7 @@
 """
 import json, subprocess, sys, time
 from playwright.sync_api import sync_playwright
+sys.path.insert(0, "/t")
 
 srv = subprocess.Popen([sys.executable, "-m", "http.server", "8099", "-d", "/site"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 time.sleep(1)
@@ -16,28 +17,8 @@ def check(name, ok, detail=None):
         R["failed"].append(name)
 
 #  A simple auto-player run inside the page, in fast-forward: it steps the simulation directly.
-BOT = """(args) => {
-  const g = window.game, NB = window.NeonBricks, STEP = 1/120;
-  const steps = args.steps, miss = args.miss || 0;
-  if (g.state === 'title') g.action();
-  let n = 0;
-  for (; n < steps && g.state !== 'over'; n++) {
-    if (g.state === 'serve') g.action();
-    // track the lowest ball coming down; aim slightly off-centre to send it at an angle
-    let target = null, lowest = -1;
-    for (const b of g.balls) { if (b.vy > 0 && b.y > lowest) { lowest = b.y; target = b; } }
-    if (target) {
-      // predict where it reaches the paddle line, folding the side-wall bounces
-      let t = (NB.PADDLE_Y - target.y) / target.vy, x = target.x + target.vx * t;
-      const span = NB.W - 12; x = x - 6; x = ((x % (2*span)) + 2*span) % (2*span); x = (x > span ? 2*span - x : x) + 6;
-      g.pointerX = miss && (n % 1200 > 1200 - miss) ? (x < 200 ? 390 : 10) : x + (x < 200 ? 14 : -14);
-    }
-    g.update(STEP);
-  }
-  return { steps: n, state: g.state, score: g.score, wall: g.wall, lives: g.lives, bricks: g.stats.bricks,
-           maxCombo: g.stats.maxCombo, powers: g.stats.powers, left: g.wallData.bricks.length,
-           events: g.events.reduce((m, e) => (m[e.ev] = (m[e.ev] || 0) + 1, m), {}) };
-}"""
+from smoke_bot import BOT
+
 
 with sync_playwright() as p:
     b = p.chromium.launch()
@@ -48,7 +29,7 @@ with sync_playwright() as p:
     pg = ctx.new_page()
     pg.on("pageerror", lambda e: R["errors"].append(str(e)))
     pg.on("console", lambda m: m.type == "error" and R["errors"].append(m.text))
-    pg.goto(BASE + "?debug=true&day=2026-11-23"); pg.wait_for_timeout(800)
+    pg.goto(BASE + "?debug=true&day=2026-11-22"); pg.wait_for_timeout(800)
     check("title state", pg.evaluate("game.state") == "title", pg.evaluate("game.state"))
     size = pg.evaluate("(() => { const r = document.getElementById('gameCanvas').getBoundingClientRect(); return [r.width, r.height, innerWidth, innerHeight, document.documentElement.scrollHeight]; })()")
     check("canvas fits phone", size[0] <= size[2] and size[1] <= size[3] and size[4] <= size[3] + 1, size)
@@ -77,7 +58,7 @@ with sync_playwright() as p:
     pg.screenshot(path="/out/04-later.png")
 
     # 3. Game over: a player who misses on purpose.
-    pg.goto(BASE + "?debug=true&day=2026-11-23&vs=600&by=bot"); pg.wait_for_timeout(600)
+    pg.goto(BASE + "?debug=true&day=2026-11-22&vs=600&by=bot"); pg.wait_for_timeout(600)
     r2 = pg.evaluate(BOT, {"steps": 120 * 600, "miss": 400})
     R["bot_miss"] = r2
     check("run ends", r2["state"] == "over", r2)
@@ -85,7 +66,7 @@ with sync_playwright() as p:
     check("game-over card shown", pg.evaluate("!document.getElementById('gameover').hidden"))
     share = pg.evaluate("NeonDaily.shareMessage()")
     R["share"] = share
-    check("share text", share and "Neon Bricks · Muro #1" in share and "/play/neon-bricks?d=2026-11-23" in share and ("vs=%d" % r2["score"]) in share, share)
+    check("share text", share and "Neon Bricks · Muro #1" in share and "/play/neon-bricks?d=2026-11-22" in share and ("vs=%d" % r2["score"]) in share, share)
     check("outcome headline", pg.evaluate("NeonDaily.lastResult().outcome") in ("win", "lose", "tie"), pg.evaluate("NeonDaily.lastResult()"))
     pg.screenshot(path="/out/05-over.png")
     pg.locator("#goAgain").click(); pg.wait_for_timeout(300)
@@ -94,18 +75,18 @@ with sync_playwright() as p:
 
     # 4. Same wall for everyone on a day, a different wall on another day.
     walls = {}
-    for day in ("2026-11-23", "2026-11-23", "2026-11-24", "2026-11-25"):
+    for day in ("2026-11-22", "2026-11-22", "2026-11-23", "2026-11-24"):
         c = b.new_context(); q = c.new_page(); q.goto(BASE + "?debug=true&day=" + day); q.wait_for_timeout(300)
         walls.setdefault(day, []).append(q.evaluate("(() => [1,2,3].map(n => { const w = NeonBricks.buildWall(n); return w.shape + ':' + w.bricks.length + ':' + w.bricks.filter(x=>x.hard).length + ':' + w.bricks.filter(x=>x.power).map(x=>x.r+'.'+x.c+x.power).join(','); }))()"))
         c.close()
     R["walls"] = walls
-    check("same day, same walls", walls["2026-11-23"][0] == walls["2026-11-23"][1])
-    check("other days differ", walls["2026-11-24"][0] != walls["2026-11-23"][0] and walls["2026-11-25"][0] != walls["2026-11-24"][0])
+    check("same day, same walls", walls["2026-11-22"][0] == walls["2026-11-22"][1])
+    check("other days differ", walls["2026-11-23"][0] != walls["2026-11-22"][0] and walls["2026-11-24"][0] != walls["2026-11-23"][0])
 
     # 5. Desktop: keyboard and mouse.
     c = b.new_context(viewport={"width": 1280, "height": 800}, locale="en-US"); q = c.new_page()
     q.on("pageerror", lambda e: R["errors"].append(str(e)))
-    q.goto(BASE + "?debug=true&day=2026-11-23"); q.wait_for_timeout(500)
+    q.goto(BASE + "?debug=true&day=2026-11-22"); q.wait_for_timeout(500)
     q.keyboard.press("Space"); q.wait_for_timeout(100); q.keyboard.press("Space"); q.wait_for_timeout(300)
     check("desktop space starts and launches", q.evaluate("game.state") == "play", q.evaluate("game.state"))
     x0 = q.evaluate("game.paddle.x"); q.keyboard.down("ArrowLeft"); q.wait_for_timeout(300); q.keyboard.up("ArrowLeft")
