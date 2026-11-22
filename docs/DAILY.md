@@ -27,9 +27,14 @@ The combo counts bricks broken since the ball last touched the paddle: ×2 from 
 
 ## A score to beat
 
-`...?d=2026-11-23&vs=1200` (and `&by=bot` for the auto-player's score) shows the goal on the title screen and in the
+`...?d=2026-11-22&vs=1205` (and `&by=bot` for the auto-player's score) shows the goal on the title screen and in the
 score line. A score in a link is *declared*; it is *verified* only when it matches a run on record in `VERIFIED`
 (`js/daily.js`). The result card and the shared text differ for a win, a tie and a loss.
+
+Today the verified score is the auto-player's **1205 on wall #1** (2026-11-22): `tests/autoplayer.js` with paddle speed
+520 px/s, the best of five seeds (1205, 490, 470, 190 and 145). The bot plays with human limits: a top paddle speed, a
+late reaction and a random aim on every hit. It decides once per physics step, so the run plays the same in
+fast-forward and in real time; `tests/render_teaser.py` replays it frame by frame and gets the same 1205.
 
 ## Progress and measurement
 

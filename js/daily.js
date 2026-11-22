@@ -77,7 +77,7 @@
     //  A score that arrives in a link is only DECLARED: anybody can type a number in a link. It counts as VERIFIED
     //  only when it matches a run on record below (a recorded run that can be played back or repeated).
     var VERIFIED = [
-        //  { day: 'YYYY-MM-DD', score: N, by: 'bot' }: added once the auto-player's run on that day is recorded.
+        { day: '2026-11-22', score: 1205, by: 'bot' }     // the auto-player (tests/autoplayer.js, speed 520) on wall #1: best of five seeds (1205, 490, 470, 190, 145)
     ];
     function readTarget() {
         var search = window.location.search;
