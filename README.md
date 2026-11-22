@@ -10,7 +10,7 @@ JavaScript, CSS y HTML puros: sin frameworks, sin paso de compilación, sin regi
 *English: a brick breaker with one wall of the day, the same for everyone. Open-source browser game in plain
 JavaScript. Add `?lang=en` for English.*
 
-![Neon Bricks](og.png)
+![Neon Bricks](og.jpg)
 
 ## Qué tiene
 
