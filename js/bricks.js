@@ -715,6 +715,7 @@
     };
 
     Game.prototype.center = function (ctx, text, y, size, color, glow) {
+        if (window.NeonStage && window.NeonStage.text) { window.NeonStage.text.center(ctx, text, W / 2, y, size, color, glow); return; }      // reads on any stage (neon-stage.js)
         ctx.save();
         ctx.font = 'bold ' + size + 'px Arial, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         if (glow) { ctx.shadowColor = color; ctx.shadowBlur = 10; }
@@ -745,8 +746,11 @@
 
     Game.prototype.drawTitle = function (ctx) {
         ctx.fillStyle = 'rgba(5,6,15,0.55)'; ctx.fillRect(0, TOP, W, H - TOP);
-        this.center(ctx, 'NEON', 170, 54, '#ff00c8', true);
-        this.center(ctx, 'BRICKS', 225, 54, '#00f0ff', true);
+        //  The game's 3D logo (Blender, img/logo.png); the chrome words until it loads.
+        if (!(window.NeonStage && window.NeonStage.text && window.NeonStage.text.logo(ctx, W / 2, 190, 320))) {
+            this.center(ctx, 'NEON', 170, 54, '#ff00c8', true);
+            this.center(ctx, 'BRICKS', 225, 54, '#00f0ff', true);
+        }
         if (D) {
             var day = D.today();
             this.center(ctx, t(D.otherDay() ? 'title.shared' : 'title.daily', { n: D.challengeNumber(), date: I.shortDate(day) }), 285, 16, '#ffffff');
@@ -760,9 +764,13 @@
             }
             if (!D.onPortal) { this.center(ctx, t('title.more', { host: D.CONFIG.portalHost }), 600, 12, '#00ff9c'); }
         }
-        ctx.globalAlpha = 0.55 + 0.45 * Math.abs(Math.sin(this.time * 3));
-        this.center(ctx, t(this.touch ? 'title.start.touch' : 'title.start.desktop'), 450, 18, '#ffffff', true);
-        ctx.globalAlpha = 1;
+        if (window.NeonStage && window.NeonStage.text) {
+            window.NeonStage.text.plate(ctx, t(this.touch ? 'title.start.touch' : 'title.start.desktop'), W / 2, 450, 18, '#ffffff', Math.abs(Math.sin(this.time * 3)));
+        } else {
+            ctx.globalAlpha = 0.55 + 0.45 * Math.abs(Math.sin(this.time * 3));
+            this.center(ctx, t(this.touch ? 'title.start.touch' : 'title.start.desktop'), 450, 18, '#ffffff', true);
+            ctx.globalAlpha = 1;
+        }
     };
 
     Game.prototype.drawPause = function (ctx) {
