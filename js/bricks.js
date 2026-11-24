@@ -765,7 +765,7 @@
             if (this.best || this.streak) {
                 this.center(ctx, t('title.status', { best: num(this.best), streak: this.streak }), 390, 13, '#b0b0c0');
             }
-            if (!D.onPortal) { this.center(ctx, t('title.more', { host: D.CONFIG.portalHost }), 600, 12, '#00ff9c'); }
+            if (!D.onPortal && !D.hosted) { this.center(ctx, t('title.more', { host: D.CONFIG.portalHost }), 600, 12, '#00ff9c'); }
         }
         if (window.NeonStage && window.NeonStage.text) {
             window.NeonStage.text.plate(ctx, t(this.touch ? 'title.start.touch' : 'title.start.desktop'), W / 2, 450, 18, '#ffffff', Math.abs(Math.sin(this.time * 3)));
